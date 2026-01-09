@@ -1,5 +1,3 @@
-// Vertegenwoordigers
-const reps = ["Marc", "Johan", "Filip"];
 
 // Artikelen met groepen (volledige lijst)
 const artikelen = [
@@ -127,17 +125,6 @@ const artikelen = [
 
 ];
 
-// Dropdown vullen
-function vulDropdown() {
-  const select = document.getElementById("rep");
-  reps.forEach(r => {
-    const option = document.createElement("option");
-    option.value = r;
-    option.textContent = r;
-    select.appendChild(option);
-  });
-}
-
 // Artikelen tabel vullen met groepen
 function vulArtikelen() {
   const table = document.getElementById("artikelen");
@@ -146,75 +133,96 @@ function vulArtikelen() {
   const groepen = [...new Set(artikelen.map(a => a.groep))];
 
   groepen.forEach(groepNaam => {
-    // Groep header
+    const groepArtikelen = artikelen.filter(a => a.groep === groepNaam);
+
     let row = table.insertRow();
     let cell = row.insertCell();
     cell.colSpan = 4;
-    cell.style.fontWeight = "bold";
-    cell.style.backgroundColor = "#f0f0f0";
     cell.textContent = groepNaam;
+    cell.style.fontWeight = "bold";
+    cell.style.background = "#f0f0f0";
 
-    const groepArtikelen = artikelen.filter(a => a.groep === groepNaam);
     groepArtikelen.forEach(a => {
       let row = table.insertRow();
-      row.insertCell(0).textContent = a.naam;      // Artikelnaam
-      row.insertCell(1).textContent = a.code;      // Artikelcode
-      row.insertCell(2).textContent = a.aantal;    // Aantal
+      row.insertCell(0).textContent = a.naam;
+      row.insertCell(1).textContent = a.code;
+      row.insertCell(2).textContent = a.aantal;
 
-      const cell = row.insertCell(3);              // Acties
+      const acties = row.insertCell(3);
       const plus = document.createElement("button");
-      plus.textContent = "+";
-      plus.onclick = () => { a.aantal++; row.cells[2].textContent = a.aantal; };
-
       const min = document.createElement("button");
-      min.textContent = "-";
-      min.onclick = () => { if(a.aantal>0){ a.aantal--; row.cells[2].textContent = a.aantal; } };
 
-      cell.appendChild(min);
-      cell.appendChild(plus);
+      plus.textContent = "+";
+      min.textContent = "-";
+
+      plus.onclick = () => {
+        a.aantal++;
+        row.cells[2].textContent = a.aantal;
+      };
+
+      min.onclick = () => {
+        if (a.aantal > 0) {
+          a.aantal--;
+          row.cells[2].textContent = a.aantal;
+        }
+      };
+
+      acties.append(min, plus);
     });
   });
 }
 
-
-// Excel downloaden
+// Excel export
 function downloadExcel() {
-  const rep = document.getElementById("rep").value;
   const klant = document.getElementById("klant").value;
   const project = document.getElementById("project").value;
-  const opmerkingen = document.getElementById("opmerkingen").value;
 
-  if(!rep || !klant || !project){
-    alert("Vul vertegenwoordig, klant en project in!");
+  if (!klant || !project) {
+    alert("Klant en project zijn verplicht.");
     return;
   }
 
-  const data = artikelen
-    .filter(a => a.aantal > 0)
-    .map(a => ({
-      Vertegenwoordiger: rep,
-      Klant: klant,
-      Project: project,
-      Groep: a.groep,
-      ArtikelCode: a.code,
-      ArtikelNaam: a.naam,
-      Aantal: a.aantal,
-      Opmerkingen: opmerkingen
-    }));
+  let rijNummer = 10000;
+  const exportData = [];
 
-  if(data.length === 0){
-    alert("Selecteer minstens één artikel!");
+  const groepen = [...new Set(artikelen.map(a => a.groep))];
+
+  groepen.forEach(groep => {
+    const groepArtikelen = artikelen.filter(a => a.groep === groep && a.aantal > 0);
+    if (groepArtikelen.length === 0) return;
+
+    groepArtikelen.forEach(a => {
+      exportData.push({
+        A: rijNummer,
+        Q: groep,
+        E: a.code,
+        AD: a.aantal
+      });
+      rijNummer += 10000;
+    });
+  });
+
+  if (exportData.length === 0) {
+    alert("Geen artikelen geselecteerd.");
     return;
   }
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, "Offerte");
-  XLSX.writeFile(wb, `${klant}_${project}_offerte.xlsx`);
+  const ws = XLSX.utils.json_to_sheet(exportData, {
+    header: ["A", "Q", "E", "AD"],
+    skipHeader: true
+  });
+
+  XLSX.utils.book_append_sheet(
+    XLSX.utils.book_new(),
+    ws,
+    "Export"
+  );
+
+  XLSX.writeFile(
+    { SheetNames: ["Export"], Sheets: { Export: ws } },
+    `${klant}_${project}.xlsx`
+  );
 }
 
-// Pagina laden
-window.onload = () => {
-  vulDropdown();
-  vulArtikelen();
-};
+// Init
+window.onload = vulArtikelen;
