@@ -15,7 +15,7 @@ th, td {
 }
 
 th {
-  background: #d9d9d9;
+  background-color: #d9d9d9;
 }
 
 button {
@@ -28,9 +28,10 @@ input {
   width: 300px;
 }
 
-/* Mobile */
 @media (max-width: 600px) {
-  table, input, button {
+  table,
+  input,
+  button {
     width: 100%;
   }
 }
