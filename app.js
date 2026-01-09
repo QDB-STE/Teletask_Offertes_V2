@@ -125,25 +125,26 @@ const artikelen = [
 
 ];
 
-// Artikelen tabel vullen met groepen
+// =======================
+// Tabel vullen
+// =======================
 function vulArtikelen() {
   const table = document.getElementById("artikelen");
-  table.innerHTML = "<tr><th>Artikel</th><th>Code</th><th>Aantal</th><th>Acties</th></tr>";
+  table.innerHTML =
+    "<tr><th>Artikel</th><th>Code</th><th>Aantal</th><th>Acties</th></tr>";
 
   const groepen = [...new Set(artikelen.map(a => a.groep))];
 
-  groepen.forEach(groepNaam => {
-    const groepArtikelen = artikelen.filter(a => a.groep === groepNaam);
-
-    let row = table.insertRow();
-    let cell = row.insertCell();
+  groepen.forEach(groep => {
+    const header = table.insertRow();
+    const cell = header.insertCell();
     cell.colSpan = 4;
-    cell.textContent = groepNaam;
+    cell.textContent = groep;
     cell.style.fontWeight = "bold";
-    cell.style.background = "#f0f0f0";
+    cell.style.backgroundColor = "#f0f0f0";
 
-    groepArtikelen.forEach(a => {
-      let row = table.insertRow();
+    artikelen.filter(a => a.groep === groep).forEach(a => {
+      const row = table.insertRow();
       row.insertCell(0).textContent = a.naam;
       row.insertCell(1).textContent = a.code;
       row.insertCell(2).textContent = a.aantal;
@@ -172,57 +173,63 @@ function vulArtikelen() {
   });
 }
 
+// =======================
 // Excel export
+// =======================
 function downloadExcel() {
-  const klant = document.getElementById("klant").value;
-  const project = document.getElementById("project").value;
+  const klant = document.getElementById("klant").value.trim();
+  const project = document.getElementById("project").value.trim();
 
   if (!klant || !project) {
     alert("Klant en project zijn verplicht.");
     return;
   }
 
-  let rijNummer = 10000;
-  const exportData = [];
-
+  let rij = 10000;
+  const output = [];
   const groepen = [...new Set(artikelen.map(a => a.groep))];
 
   groepen.forEach(groep => {
-    const groepArtikelen = artikelen.filter(a => a.groep === groep && a.aantal > 0);
-    if (groepArtikelen.length === 0) return;
+    const items = artikelen.filter(
+      a => a.groep === groep && a.aantal > 0
+    );
 
-    groepArtikelen.forEach(a => {
-      exportData.push({
-        A: rijNummer,
-        Q: groep,
-        E: a.code,
-        AD: a.aantal
-      });
-      rijNummer += 10000;
+    if (items.length === 0) return;
+
+    // Groepregel
+    output.push({ A: rij, Q: groep, E: "", AD: "" });
+    rij += 10000;
+
+    // Witregel
+    output.push({ A: rij, Q: "", E: "", AD: "" });
+    rij += 10000;
+
+    items.forEach(a => {
+      output.push({ A: rij, Q: "", E: a.code, AD: a.aantal });
+      rij += 10000;
+
+      output.push({ A: rij, Q: "", E: "", AD: "" });
+      rij += 10000;
     });
   });
 
-  if (exportData.length === 0) {
+  if (output.length === 0) {
     alert("Geen artikelen geselecteerd.");
     return;
   }
 
-  const ws = XLSX.utils.json_to_sheet(exportData, {
+  const ws = XLSX.utils.json_to_sheet(output, {
     header: ["A", "Q", "E", "AD"],
     skipHeader: true
   });
 
-  XLSX.utils.book_append_sheet(
-    XLSX.utils.book_new(),
-    ws,
-    "Export"
-  );
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Export");
 
-  XLSX.writeFile(
-    { SheetNames: ["Export"], Sheets: { Export: ws } },
-    `${klant}_${project}.xlsx`
-  );
+  XLSX.writeFile(wb, `${klant}_${project}.xlsx`);
 }
 
+// =======================
 // Init
+// =======================
 window.onload = vulArtikelen;
